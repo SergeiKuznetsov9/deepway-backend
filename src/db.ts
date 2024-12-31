@@ -16,6 +16,7 @@ export const client = new MongoClient(mongoUri, {
 });
 
 export const runDb = async () => {
+  
   try {
     await client.connect();
     await client.db("articles").command({ ping: 1 });
