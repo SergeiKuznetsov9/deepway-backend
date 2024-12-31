@@ -15,7 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.createApp = void 0;
 const express_1 = __importDefault(require("express"));
 const db_1 = require("./db");
-const mongodb_1 = require("mongodb");
+const articles_router_1 = require("./articles-router");
 const createApp = () => {
     const app = (0, express_1.default)();
     app.use((req, res, next) => {
@@ -53,143 +53,154 @@ const createApp = () => {
             res.status(500).json({ error: "Ошибка сохранения данных" });
         }
     }));
-    app.get("/articles", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-        let articles = [];
-        const { _expand, _sort, _page, _limit, _order, q, type } = req.query;
-        const pipeline = [];
-        if (type && type !== "ALL") {
-            pipeline.push({
-                $match: {
-                    type: type,
-                },
-            });
-        }
-        if (q) {
-            pipeline.push({
-                $match: {
-                    title: { $regex: q, $options: "i" },
-                },
-            });
-        }
-        if (_sort) {
-            const sortOrder = _order === "desc" ? -1 : 1;
-            if (_sort === "created") {
-                pipeline.push({
-                    $addFields: {
-                        parsedDate: {
-                            $dateFromString: {
-                                dateString: "$createdAt",
-                                format: "%d.%m.%Y",
-                            },
-                        },
-                    },
-                }, {
-                    $sort: { parsedDate: sortOrder },
-                });
-            }
-            if (_sort === "title") {
-                pipeline.push({
-                    $addFields: {
-                        titleLower: { $toLower: "$title" },
-                    },
-                }, {
-                    $sort: { titleLower: sortOrder },
-                }, {
-                    $project: {
-                        titleLower: 0,
-                    },
-                });
-            }
-            if (_sort === "views") {
-                pipeline.push({
-                    $sort: { views: sortOrder },
-                });
-            }
-        }
-        if (_limit && !_page) {
-            pipeline.push({
-                $limit: Number(_limit),
-            });
-        }
-        if (_limit && _page) {
-            const skip = (Number(_page) - 1) * Number(_limit);
-            pipeline.push({
-                $skip: skip,
-            });
-            pipeline.push({
-                $limit: Number(_limit),
-            });
-        }
-        if (_expand === "user") {
-            pipeline.push({
-                $addFields: {
-                    userIdObject: {
-                        $convert: {
-                            input: "$userId",
-                            to: "objectId",
-                        },
-                    },
-                },
-            }, {
-                $lookup: {
-                    from: "users",
-                    localField: "userIdObject",
-                    foreignField: "_id",
-                    as: "user",
-                },
-            }, { $unwind: "$user" }, { $unset: ["user.password"] });
-        }
-        try {
-            articles = (yield db_1.client
-                .db("deepway")
-                .collection("articles")
-                .aggregate(pipeline)
-                .toArray());
-        }
-        catch (error) {
-            console.error("Ошибка чтения данных", error);
-            res.status(500).json({ error: "Ошибка получения данных" });
-            return;
-        }
-        res.json(articles);
-    }));
-    app.get("/articles/:id", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-        const requestedId = req.params.id;
-        try {
-            const article = (yield db_1.client
-                .db("deepway")
-                .collection("articles")
-                .aggregate([
-                { $match: { _id: new mongodb_1.ObjectId(requestedId) } },
-                {
-                    $addFields: {
-                        userIdObject: {
-                            $convert: {
-                                input: "$userId",
-                                to: "objectId",
-                            },
-                        },
-                    },
-                },
-                {
-                    $lookup: {
-                        from: "users",
-                        localField: "userIdObject",
-                        foreignField: "_id",
-                        as: "user",
-                    },
-                },
-                { $unwind: "$user" },
-                { $unset: ["userIdObject", "user.password"] },
-            ])
-                .next());
-            res.json(article);
-        }
-        catch (error) {
-            console.error("Ошибка чтения данных", error);
-            res.status(500).json({ error: "Ошибка получения данных" });
-        }
-    }));
+    app.use("/articles", (0, articles_router_1.getArticleRouter)(db_1.client));
+    //   app.get("/articles", async (req, res) => {
+    //     let articles: WithId<Document>[] = [];
+    //     const { _expand, _sort, _page, _limit, _order, q, type } = req.query;
+    //     const pipeline: any[] = [];
+    //     if (type && type !== "ALL") {
+    //       pipeline.push({
+    //         $match: {
+    //           type: type,
+    //         },
+    //       });
+    //     }
+    //     if (q) {
+    //       pipeline.push({
+    //         $match: {
+    //           title: { $regex: q, $options: "i" },
+    //         },
+    //       });
+    //     }
+    //     if (_sort) {
+    //       const sortOrder = _order === "desc" ? -1 : 1;
+    //       if (_sort === "created") {
+    //         pipeline.push(
+    //           {
+    //             $addFields: {
+    //               parsedDate: {
+    //                 $dateFromString: {
+    //                   dateString: "$createdAt",
+    //                   format: "%d.%m.%Y",
+    //                 },
+    //               },
+    //             },
+    //           },
+    //           {
+    //             $sort: { parsedDate: sortOrder },
+    //           }
+    //         );
+    //       }
+    //       if (_sort === "title") {
+    //         pipeline.push(
+    //           {
+    //             $addFields: {
+    //               titleLower: { $toLower: "$title" },
+    //             },
+    //           },
+    //           {
+    //             $sort: { titleLower: sortOrder },
+    //           },
+    //           {
+    //             $project: {
+    //               titleLower: 0,
+    //             },
+    //           }
+    //         );
+    //       }
+    //       if (_sort === "views") {
+    //         pipeline.push({
+    //           $sort: { views: sortOrder },
+    //         });
+    //       }
+    //     }
+    //     if (_limit && !_page) {
+    //       pipeline.push({
+    //         $limit: Number(_limit),
+    //       });
+    //     }
+    //     if (_limit && _page) {
+    //       const skip = (Number(_page) - 1) * Number(_limit);
+    //       pipeline.push({
+    //         $skip: skip,
+    //       });
+    //       pipeline.push({
+    //         $limit: Number(_limit),
+    //       });
+    //     }
+    //     if (_expand === "user") {
+    //       pipeline.push(
+    //         {
+    //           $addFields: {
+    //             userIdObject: {
+    //               $convert: {
+    //                 input: "$userId",
+    //                 to: "objectId",
+    //               },
+    //             },
+    //           },
+    //         },
+    //         {
+    //           $lookup: {
+    //             from: "users",
+    //             localField: "userIdObject",
+    //             foreignField: "_id",
+    //             as: "user",
+    //           },
+    //         },
+    //         { $unwind: "$user" },
+    //         { $unset: ["user.password"] }
+    //       );
+    //     }
+    //     try {
+    //       articles = (await client
+    //         .db("deepway")
+    //         .collection("articles")
+    //         .aggregate(pipeline)
+    //         .toArray()) as WithId<Document>[];
+    //     } catch (error) {
+    //       console.error("Ошибка чтения данных", error);
+    //       res.status(500).json({ error: "Ошибка получения данных" });
+    //       return;
+    //     }
+    //     res.json(articles);
+    //   });
+    //   app.get("/articles/:id", async (req, res) => {
+    //     const requestedId = req.params.id;
+    //     try {
+    //       const article = (await client
+    //         .db("deepway")
+    //         .collection("articles")
+    //         .aggregate([
+    //           { $match: { _id: new ObjectId(requestedId) } },
+    //           {
+    //             $addFields: {
+    //               userIdObject: {
+    //                 $convert: {
+    //                   input: "$userId",
+    //                   to: "objectId",
+    //                 },
+    //               },
+    //             },
+    //           },
+    //           {
+    //             $lookup: {
+    //               from: "users",
+    //               localField: "userIdObject",
+    //               foreignField: "_id",
+    //               as: "user",
+    //             },
+    //           },
+    //           { $unwind: "$user" },
+    //           { $unset: ["userIdObject", "user.password"] },
+    //         ])
+    //         .next()) as WithId<Document>;
+    //       res.json(article);
+    //     } catch (error) {
+    //       console.error("Ошибка чтения данных", error);
+    //       res.status(500).json({ error: "Ошибка получения данных" });
+    //     }
+    //   });
     app.get("/profile/:userId", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         const userId = req.params.userId;
         try {
