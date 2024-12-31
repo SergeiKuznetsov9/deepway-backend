@@ -5,7 +5,10 @@
   "author": "Wayfarer",
   "license": "MIT",
   "scripts": {
-    "start": "node ./src/index.js",
+    "compile": "tsc",
+    "watch": "tsc -w",
+    "dev": "nodemon --inspect ./dist/src/index.js",
+    "start": "node ./dist/src/index.js",
     "test": "jest"
   },
   "dependencies": {
