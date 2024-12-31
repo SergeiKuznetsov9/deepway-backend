@@ -14,7 +14,7 @@ const app_1 = require("./app");
 const port = process.env.PORT || 3000;
 const startApp = () => __awaiter(void 0, void 0, void 0, function* () {
     yield (0, db_1.runDb)();
-    const app = (0, app_1.createApp)();
+    const app = (0, app_1.createApp)(db_1.client);
     app.listen(port, () => {
         console.log(`Deepway app is listening on port ${port}`);
     });

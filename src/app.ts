@@ -1,9 +1,8 @@
 import express from "express";
-import { client } from "./db/db";
-import { WithId, Document, ObjectId } from "mongodb";
+import { WithId, Document, MongoClient } from "mongodb";
 import { getArticleRouter } from "./routers/articles-router";
 
-export const createApp = () => {
+export const createApp = (client: MongoClient) => {
   const app = express();
 
   app.use((req: any, res: any, next) => {

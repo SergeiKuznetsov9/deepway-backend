@@ -14,9 +14,8 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.createApp = void 0;
 const express_1 = __importDefault(require("express"));
-const db_1 = require("./db/db");
 const articles_router_1 = require("./routers/articles-router");
-const createApp = () => {
+const createApp = (client) => {
     const app = (0, express_1.default)();
     app.use((req, res, next) => {
         res.setHeader("Access-Control-Allow-Origin", "*");
@@ -35,7 +34,7 @@ const createApp = () => {
     app.post("/login", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         const { username, password } = req.body;
         try {
-            const user = yield db_1.client
+            const user = yield client
                 .db("deepway")
                 .collection("users")
                 .findOne({ username, password }, { projection: { password: 0 } });
@@ -53,11 +52,11 @@ const createApp = () => {
             res.status(500).json({ error: "Ошибка сохранения данных" });
         }
     }));
-    app.use("/articles", (0, articles_router_1.getArticleRouter)(db_1.client));
+    app.use("/articles", (0, articles_router_1.getArticleRouter)(client));
     app.get("/profile/:userId", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         const userId = req.params.userId;
         try {
-            const profile = yield db_1.client
+            const profile = yield client
                 .db("deepway")
                 .collection("profile")
                 .findOne({ userId });
@@ -72,7 +71,7 @@ const createApp = () => {
         const { id, age, avatar, city, country, currency, first, lastname, username, } = req.body;
         try {
             const userId = req.params.userId;
-            const result = yield db_1.client.db("deepway").collection("profile").updateOne({ userId }, {
+            const result = yield client.db("deepway").collection("profile").updateOne({ userId }, {
                 $set: {
                     first,
                     lastname,
@@ -97,7 +96,7 @@ const createApp = () => {
     app.get("/article-ratings", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         const { userId, articleId } = req.query;
         try {
-            const articleRating = yield db_1.client
+            const articleRating = yield client
                 .db("deepway")
                 .collection("article-ratings")
                 .findOne({ userId, articleId });
@@ -112,7 +111,7 @@ const createApp = () => {
         const { articleId, userId, rate, feedback } = req.body;
         const rating = { articleId, userId, rate, feedback };
         try {
-            const result = yield db_1.client
+            const result = yield client
                 .db("deepway")
                 .collection("article-ratings")
                 .insertOne(rating);
@@ -146,7 +145,7 @@ const createApp = () => {
             }, { $unwind: "$user" }, { $unset: ["userIdObject", "user.password"] });
         }
         try {
-            const comments = (yield db_1.client
+            const comments = (yield client
                 .db("deepway")
                 .collection("comments")
                 .aggregate(pipeline)
@@ -162,7 +161,7 @@ const createApp = () => {
         const { articleId, userId, text } = req.body;
         try {
             const comment = { articleId, userId, text };
-            const result = yield db_1.client
+            const result = yield client
                 .db("deepway")
                 .collection("comments")
                 .insertOne(comment);
@@ -176,7 +175,7 @@ const createApp = () => {
     app.get("/notifications/:id", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         const userId = req.params.id;
         try {
-            const notifications = yield db_1.client
+            const notifications = yield client
                 .db("deepway")
                 .collection("notifications")
                 .find({ userId })
