@@ -8,33 +8,39 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.runDb = void 0;
 const mongodb_1 = require("mongodb");
-const dotenv_1 = __importDefault(require("dotenv"));
-dotenv_1.default.config();
+const mongodb_memory_server_1 = require("mongodb-memory-server");
 const mongoUri = `mongodb+srv://${process.env.MONGO_USERNAME}:${process.env.MONGO_PASSWORD}@${process.env.MONGO_CLUSTER}/?retryWrites=true&w=majority&appName=Cluster-deepway`;
 // const mongoUri = `mongodb://0.0.0.0:27017`;
 const runDb = () => __awaiter(void 0, void 0, void 0, function* () {
-    const client = new mongodb_1.MongoClient(mongoUri, {
-        serverApi: {
-            version: mongodb_1.ServerApiVersion.v1,
-            strict: true,
-            deprecationErrors: true,
-        },
-        tlsAllowInvalidCertificates: true,
-    });
-    try {
-        yield client.connect();
-        yield client.db("articles").command({ ping: 1 });
-        console.log("Connected successfuly to mongo server");
+    console.log(process.env.NODE_ENV === 'production');
+    let client;
+    if (process.env.NODE_ENV === 'production') {
+        client = new mongodb_1.MongoClient(mongoUri, {
+            serverApi: {
+                version: mongodb_1.ServerApiVersion.v1,
+                strict: true,
+                deprecationErrors: true,
+            },
+            tlsAllowInvalidCertificates: true,
+        });
+        try {
+            yield client.connect();
+            yield client.db("articles").command({ ping: 1 });
+            console.log("Connected successfuly to mongo server");
+        }
+        catch (error) {
+            console.error("Ошибка при подключении к базе данных", error);
+            yield client.close();
+        }
     }
-    catch (error) {
-        console.error("Ошибка при подключении к базе данных", error);
-        yield client.close();
+    else {
+        const mongod = yield mongodb_memory_server_1.MongoMemoryServer.create();
+        const uri = mongod.getUri();
+        client = new mongodb_1.MongoClient(uri);
+        yield client.connect();
     }
     return client;
 });

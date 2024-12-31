@@ -1,3 +1,6 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import { runDb } from "./db/db";
 import { createApp } from "./app";
 
