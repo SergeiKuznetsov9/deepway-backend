@@ -9,30 +9,34 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getArticleRouter = void 0;
+exports.getProfileRouter = void 0;
 const express_1 = require("express");
-const getArticleRouter = (articlesService) => {
+const getProfileRouter = (profileService) => {
     const router = (0, express_1.Router)();
-    router.get("/", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    router.get("/:userId", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         try {
-            const articles = yield articlesService.getArticles(req.query);
-            res.json(articles);
+            const profile = yield profileService.getProfileByUserId(req.params.userId);
+            res.json(profile);
         }
         catch (error) {
             console.error("Ошибка чтения данных", error);
             res.status(500).json({ error: "Ошибка получения данных" });
         }
     }));
-    router.get("/:id", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    router.put("/:userId", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         try {
-            const article = yield articlesService.getArticleById(req.params.id);
-            res.json(article);
+            const updateResult = yield profileService.updateProfileByUserId(req.params.userId, req.body);
+            if (updateResult.matchedCount === 0) {
+                res.status(404).json({ error: "Профиль не найден" });
+                return;
+            }
+            res.status(200).json({ message: "Профиль обновлён" });
         }
         catch (error) {
-            console.error("Ошибка чтения данных", error);
-            res.status(500).json({ error: "Ошибка получения данных" });
+            console.error("Ошибка обновления данных", error);
+            res.status(500).json({ error: "Ошибка обновления данных" });
         }
     }));
     return router;
 };
-exports.getArticleRouter = getArticleRouter;
+exports.getProfileRouter = getProfileRouter;

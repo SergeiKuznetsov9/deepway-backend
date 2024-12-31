@@ -9,14 +9,20 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const db_1 = require("./db/db");
-const app_1 = require("./app");
-const port = process.env.PORT || 3000;
-const startApp = () => __awaiter(void 0, void 0, void 0, function* () {
-    const client = yield (0, db_1.runDb)();
-    const app = (0, app_1.createApp)(client, 'deepway');
-    app.listen(port, () => {
-        console.log(`Deepway app is listening on port ${port}`);
-    });
-});
-startApp();
+exports.getNotificationsRouter = void 0;
+const express_1 = require("express");
+const getNotificationsRouter = (notificationsService) => {
+    const router = (0, express_1.Router)();
+    router.get("/:userId", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+        try {
+            const notifications = yield notificationsService.getNotificationsByUserId(req.params.userId);
+            res.json(notifications);
+        }
+        catch (error) {
+            console.error("Ошибка чтения данных", error);
+            res.status(500).json({ error: "Ошибка получения данных" });
+        }
+    }));
+    return router;
+};
+exports.getNotificationsRouter = getNotificationsRouter;

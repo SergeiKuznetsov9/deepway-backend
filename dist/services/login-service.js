@@ -9,14 +9,17 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-const db_1 = require("./db/db");
-const app_1 = require("./app");
-const port = process.env.PORT || 3000;
-const startApp = () => __awaiter(void 0, void 0, void 0, function* () {
-    const client = yield (0, db_1.runDb)();
-    const app = (0, app_1.createApp)(client, 'deepway');
-    app.listen(port, () => {
-        console.log(`Deepway app is listening on port ${port}`);
-    });
-});
-startApp();
+exports.LoginService = void 0;
+class LoginService {
+    constructor(client, dbName) {
+        this.collection = client.db(dbName).collection("users");
+    }
+    getUser(userData) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return (yield this.collection.findOne(userData, {
+                projection: { password: 0 },
+            }));
+        });
+    }
+}
+exports.LoginService = LoginService;

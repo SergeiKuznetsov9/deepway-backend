@@ -9,30 +9,27 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getArticleRouter = void 0;
+exports.getLoginRouter = void 0;
 const express_1 = require("express");
-const getArticleRouter = (articlesService) => {
+const getLoginRouter = (loginService) => {
     const router = (0, express_1.Router)();
-    router.get("/", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    router.post("/", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         try {
-            const articles = yield articlesService.getArticles(req.query);
-            res.json(articles);
+            const user = yield loginService.getUser(req.body);
+            if (user) {
+                res.status(200).json(user);
+            }
+            else {
+                res.status(404).json({
+                    error: "Пользователь с таким именем и паролем не существует",
+                });
+            }
         }
         catch (error) {
-            console.error("Ошибка чтения данных", error);
-            res.status(500).json({ error: "Ошибка получения данных" });
-        }
-    }));
-    router.get("/:id", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-        try {
-            const article = yield articlesService.getArticleById(req.params.id);
-            res.json(article);
-        }
-        catch (error) {
-            console.error("Ошибка чтения данных", error);
-            res.status(500).json({ error: "Ошибка получения данных" });
+            console.error("Ошибка сохранения данных", error);
+            res.status(500).json({ error: "Ошибка сохранения данных" });
         }
     }));
     return router;
 };
-exports.getArticleRouter = getArticleRouter;
+exports.getLoginRouter = getLoginRouter;

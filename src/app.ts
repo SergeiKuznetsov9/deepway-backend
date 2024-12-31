@@ -1,11 +1,25 @@
-import express from "express";
-import { WithId, Document, MongoClient } from "mongodb";
+import express, { Express, Request, Response, NextFunction } from "express";
+import { getLoginRouter } from "./routers/login-router";
 import { getArticleRouter } from "./routers/articles-router";
+import { getProfileRouter } from "./routers/profile-router";
+import { getArticleRatingsRouter } from "./routers/article-ratings-router";
+import { getCommentsRouter } from "./routers/comments-router";
+import { getNotificationsRouter } from "./routers/notifications-router";
+import { MongoClient } from "mongodb";
+import { ArticleRatingsService } from "./services/article-ratings-service";
+import { ArticlesService } from "./services/articles-service";
+import { CommentsService } from "./services/comments-service";
+import { LoginService } from "./services/login-service";
+import { NotificationsService } from "./services/notifications-service";
+import { ProfileService } from "./services/profile-service";
 
-export const createApp = (client: MongoClient) => {
-  const app = express();
+export const createApp = (
+  client: MongoClient,
+  mongoDbName: string
+): Express => {
+  const app: Express = express();
 
-  app.use((req: any, res: any, next) => {
+  app.use((req: Request, res: Response, next: NextFunction): void => {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader(
       "Access-Control-Allow-Methods",
@@ -17,209 +31,41 @@ export const createApp = (client: MongoClient) => {
     );
 
     if (req.method === "OPTIONS") {
-      return res.sendStatus(204);
+      res.sendStatus(204);
+      return;
     }
 
     next();
   });
+
   const jsonBodyMiddleware = express.json();
   app.use(jsonBodyMiddleware);
 
-  app.get("/", (req, res) => {
+  app.get("/", (_, res: Response<string>) => {
     res.json("Deepway is runing");
   });
 
-  app.post("/login", async (req, res) => {
-    const { username, password } = req.body;
-
-    try {
-      const user = await client
-        .db("deepway")
-        .collection("users")
-        .findOne({ username, password }, { projection: { password: 0 } });
-
-      if (user) {
-        res.status(200).json(user);
-      } else {
-        res.status(404).json({
-          error: "Пользователь с таким именем и паролем не существует",
-        });
-      }
-    } catch (error) {
-      console.error("Ошибка сохранения данных", error);
-      res.status(500).json({ error: "Ошибка сохранения данных" });
-    }
-  });
-
-  app.use("/articles", getArticleRouter(client))
-
-  app.get("/profile/:userId", async (req, res) => {
-    const userId = req.params.userId;
-
-    try {
-      const profile = await client
-        .db("deepway")
-        .collection("profile")
-        .findOne({ userId });
-      res.json(profile);
-    } catch (error) {
-      console.error("Ошибка чтения данных", error);
-      res.status(500).json({ error: "Ошибка получения данных" });
-    }
-  });
-
-  app.put("/profile/:userId", async (req: any, res: any) => {
-    const {
-      id,
-      age,
-      avatar,
-      city,
-      country,
-      currency,
-      first,
-      lastname,
-      username,
-    } = req.body;
-
-    try {
-      const userId = req.params.userId;
-
-      const result = await client.db("deepway").collection("profile").updateOne(
-        { userId },
-        {
-          $set: {
-            first,
-            lastname,
-            age,
-            currency,
-            country,
-            city,
-            username,
-            avatar,
-          },
-        }
-      );
-      if (result.matchedCount === 0) {
-        return res.status(404).json({ error: "Профиль не найден" });
-      }
-
-      res.status(200).json({ message: "Профиль обновлён" });
-    } catch (error) {
-      console.error("Ошибка обновления данных", error);
-      res.status(500).json({ error: "Ошибка обновления данных" });
-    }
-  });
-
-  app.get("/article-ratings", async (req: any, res: any) => {
-    const { userId, articleId } = req.query;
-
-    try {
-      const articleRating = await client
-        .db("deepway")
-        .collection("article-ratings")
-        .findOne({ userId, articleId });
-
-      res.status(200).json(articleRating);
-    } catch (error) {
-      console.error("Ошибка получения данных", error);
-      res.status(500).json({ error: "Ошибка получения данных" });
-    }
-  });
-
-  app.post("/article-ratings", async (req, res) => {
-    const { articleId, userId, rate, feedback } = req.body;
-    const rating = { articleId, userId, rate, feedback };
-
-    try {
-      const result = await client
-        .db("deepway")
-        .collection("article-ratings")
-        .insertOne(rating);
-
-      res.status(201).json({ id: result.insertedId.toString() });
-    } catch (error) {
-      console.error("Ошибка сохранения данных", error);
-      res.status(500).json({ error: "Ошибка сохранения данных" });
-    }
-  });
-
-  app.get("/comments", async (req, res) => {
-    const { _expand, articleId } = req.query;
-    const pipeline: any[] = [{ $match: { articleId: articleId } }];
-
-    if (_expand === "user") {
-      pipeline.push(
-        {
-          $addFields: {
-            userIdObject: {
-              $convert: {
-                input: "$userId",
-                to: "objectId",
-              },
-            },
-          },
-        },
-
-        {
-          $lookup: {
-            from: "users",
-            localField: "userIdObject",
-            foreignField: "_id",
-            as: "user",
-          },
-        },
-        { $unwind: "$user" },
-        { $unset: ["userIdObject", "user.password"] }
-      );
-    }
-
-    try {
-      const comments = (await client
-        .db("deepway")
-        .collection("comments")
-        .aggregate(pipeline)
-        .toArray()) as WithId<Document>[];
-      res.json(comments);
-    } catch (error) {
-      console.error("Ошибка чтения данных", error);
-      res.status(500).json({ error: "Ошибка получения данных" });
-    }
-  });
-
-  app.post("/comments", async (req, res) => {
-    const { articleId, userId, text } = req.body;
-
-    try {
-      const comment = { articleId, userId, text };
-      const result = await client
-        .db("deepway")
-        .collection("comments")
-        .insertOne(comment);
-
-      res.status(201).json({ id: result.insertedId.toString() });
-    } catch (error) {
-      console.error("Ошибка сохранения данных", error);
-      res.status(500).json({ error: "Ошибка сохранения данных" });
-    }
-  });
-
-  app.get("/notifications/:id", async (req, res) => {
-    const userId = req.params.id;
-
-    try {
-      const notifications = await client
-        .db("deepway")
-        .collection("notifications")
-        .find({ userId })
-        .toArray();
-
-      res.json(notifications);
-    } catch (error) {
-      console.error("Ошибка чтения данных", error);
-      res.status(500).json({ error: "Ошибка получения данных" });
-    }
-  });
+  app.use(
+    "/articles",
+    getArticleRouter(new ArticlesService(client, mongoDbName))
+  );
+  app.use(
+    "/article-ratings",
+    getArticleRatingsRouter(new ArticleRatingsService(client, mongoDbName))
+  );
+  app.use(
+    "/comments",
+    getCommentsRouter(new CommentsService(client, mongoDbName))
+  );
+  app.use("/login", getLoginRouter(new LoginService(client, mongoDbName)));
+  app.use(
+    "/profile",
+    getProfileRouter(new ProfileService(client, mongoDbName))
+  );
+  app.use(
+    "/notifications",
+    getNotificationsRouter(new NotificationsService(client, mongoDbName))
+  );
 
   return app;
 };
-// const port = process.env.PORT || 3000;
