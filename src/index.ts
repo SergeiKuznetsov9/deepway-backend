@@ -1,4 +1,4 @@
-import { runDb } from "./db";
+import { runDb } from "./db/db";
 import { createApp } from "./app";
 
 const port = process.env.PORT || 3000;
